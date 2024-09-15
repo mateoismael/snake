@@ -35,6 +35,12 @@ let highScore = getHighScore();
 let direction = "";
 let gameLoop;
 
+let moveSound;
+let moveSoundInterval;
+let isMoving = false;
+
+let startScreenSound;
+
 function getRandomFoodPosition(dimension, margin, block) {
     return Math.floor(Math.random() * (dimension - 2 * margin) / block) * block + margin;
 }
@@ -78,7 +84,7 @@ function resetGame() {
 function handleKeyDown(event) {
     if (event.key === 'Enter') {
         if (startScreen.style.display !== 'none') {
-            hideStartScreen();
+            hideStartScreen(); // Esto detendrá el sonido de la pantalla de inicio
             showGameScreen();
             startGame();
         } else if (gameOverScreen.style.display !== 'none') {
@@ -105,17 +111,23 @@ function handleKeyDown(event) {
     const key = event.key;
     if (keyActions[key]) {
         keyActions[key]();
+        if (x1Change !== 0 || y1Change !== 0) {
+            isMoving = true;
+            playMoveSound();
+        }
     }
 }
 
 function startGame() {
     resetGame();
     gameLoop = setInterval(updateGameArea, 100);
+    // Removemos playMoveSound() de aquí
 }
 
 function updateGameArea() {
     if (gameClose) {
         clearInterval(gameLoop);
+        stopMoveSound(); // Detiene el sonido de movimiento
         showGameOverScreen();
         return;
     }
@@ -154,6 +166,7 @@ function updateGameArea() {
         foodx = getRandomFoodPosition(width, margin, snakeBlock);
         foody = getRandomFoodPosition(height, margin, snakeBlock);
         lengthOfSnake++;
+        playEatSound();
         if (lengthOfSnake - 1 > highScore) {
             highScore = lengthOfSnake - 1;
             saveHighScore(highScore);
@@ -166,10 +179,12 @@ function showStartScreen() {
     startScreen.style.display = 'flex';
     gameScreen.style.display = 'none';
     gameOverScreen.style.display = 'none';
+    playStartScreenSound();
 }
 
 function hideStartScreen() {
     startScreen.style.display = 'none';
+    stopStartScreenSound();
 }
 
 function showGameScreen() {
@@ -183,6 +198,7 @@ function hideGameScreen() {
 function showGameOverScreen() {
     gameOverScreen.style.display = 'flex';
     gameScreen.style.display = 'none';
+    playGameOverSound();
     document.getElementById('finalLength').textContent = padScore(lengthOfSnake - 1);
     document.getElementById('finalBest').textContent = padScore(highScore);
 }
@@ -194,3 +210,61 @@ function hideGameOverScreen() {
 document.addEventListener('keydown', handleKeyDown);
 
 window.onload = showStartScreen;
+
+// Add these functions at the end of the file
+function playEatSound() {
+    const eatSound = new Audio('eat.mp3');
+    eatSound.volume = 0.3;
+    eatSound.play();
+}
+
+function playGameOverSound() {
+    const gameOverSound = new Audio('gameover.mp3');
+    gameOverSound.volume = 0.3;
+    gameOverSound.play();
+}
+
+function playMoveSound() {
+    if (!moveSound) {
+        moveSound = new Audio('move.mp3');
+        moveSound.volume = 0.2; // Ajusta el volumen según sea necesario
+    }
+    
+    if (!moveSoundInterval && isMoving) {
+        moveSoundInterval = setInterval(() => {
+            moveSound.currentTime = 0;
+            moveSound.play();
+        }, 250); // Ajusta este valor para cambiar la frecuencia del sonido
+    }
+}
+
+function stopMoveSound() {
+    if (moveSoundInterval) {
+        clearInterval(moveSoundInterval);
+        moveSoundInterval = null;
+    }
+}
+
+function playStartScreenSound() {
+    if (!startScreenSound) {
+        startScreenSound = new Audio('start_screen.mp3');
+        startScreenSound.loop = true;
+        startScreenSound.volume = 0.5;
+    }
+    startScreenSound.play().catch(error => {
+        console.error("Error al reproducir el sonido:", error);
+    });
+}
+
+function stopStartScreenSound() {
+    if (startScreenSound) {
+        startScreenSound.pause();
+        startScreenSound.currentTime = 0;
+    }
+}
+
+document.addEventListener('click', function() {
+    if (startScreen.style.display !== 'none') {
+        playStartScreenSound();
+    }
+});
