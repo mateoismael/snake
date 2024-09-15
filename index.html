@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Python</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="startScreen" class="screen">
+        <div class="snake-text">PIXEL PYTHON</div>
+        <div class="press-start">PRESS ENTER TO START</div>
+    </div>
+
+    <div id="gameScreen" class="screen">
+        <div id="outerBorder">
+            <div id="title">PIXEL PYTHON</div>
+            <div id="innerBorder">
+                <canvas id="gameCanvas"></canvas>
+            </div>
+            <div id="scoreBoard">
+                <span>LENGTH: <span id="currentLength">000</span></span>
+                <span>BEST: <span id="bestLength">000</span></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="gameOverScreen" class="screen">
+        <h1>GAME OVER</h1>
+        <p>LENGTH: <span id="finalLength">000</span></p>
+        <p>BEST: <span id="finalBest">000</span></p>
+        <div class="press-start">PRESS ENTER TO PLAY AGAIN</div>
+    </div>
+
+    <script src="snake.js"></script>
+</body>
+</html>
