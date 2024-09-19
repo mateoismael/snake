@@ -4,12 +4,6 @@ const gameOverScreen = document.getElementById('gameOverScreen');
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// Screen configuration
-const width = 800;
-const height = 600;
-canvas.width = width;
-canvas.height = height;
-
 // Colors
 const colors = {
     black: '#000000',
@@ -20,26 +14,50 @@ const colors = {
 };
 
 // Snake
-const snakeBlock = 20;
-const margin = 0;
-
+let snakeBlock;
+let margin;
 let snakeList = [];
 let lengthOfSnake = 1;
-let x1 = width / 2;
-let y1 = height / 2;
+let x1, y1;
 let x1Change = 0;
 let y1Change = 0;
 let foodx, foody;
 let gameClose = false;
-let highScore = getHighScore();
+let highScore = 0;
 let direction = "";
 let gameLoop;
 
-let moveSound;
+// Audio
+const eatSound = new Audio('./assets/audio/eat.mp3');
+const gameOverSound = new Audio('./assets/audio/gameover.mp3');
+const moveSound = new Audio('./assets/audio/move.mp3');
+const startScreenSound = new Audio('./assets/audio/start_screen.mp3');
+
+eatSound.volume = 0.3;
+gameOverSound.volume = 0.3;
+moveSound.volume = 0.2;
+startScreenSound.volume = 1;
+startScreenSound.loop = true;
+
 let moveSoundInterval;
 let isMoving = false;
 
-let startScreenSound;
+function resizeCanvas() {
+    const container = document.getElementById('innerBorder');
+    canvas.width = container.clientWidth;
+    canvas.height = container.clientHeight;
+    snakeBlock = Math.floor(Math.min(canvas.width, canvas.height) / 20);
+    margin = snakeBlock;
+    x1 = Math.floor(canvas.width / 2 / snakeBlock) * snakeBlock;
+    y1 = Math.floor(canvas.height / 2 / snakeBlock) * snakeBlock;
+    foodx = getRandomFoodPosition(canvas.width, margin, snakeBlock);
+    foody = getRandomFoodPosition(canvas.height, margin, snakeBlock);
+    
+    // Redibujar el juego después de redimensionar
+    if (gameLoop) {
+        updateGameArea();
+    }
+}
 
 function getRandomFoodPosition(dimension, margin, block) {
     return Math.floor(Math.random() * (dimension - 2 * margin) / block) * block + margin;
@@ -50,12 +68,29 @@ function drawSnake() {
     snakeList.forEach(([x, y]) => ctx.fillRect(x, y, snakeBlock, snakeBlock));
 }
 
-function getHighScore() {
-    return parseInt(localStorage.getItem('highScore')) || 0;
+async function getHighScore() {
+    try {
+        const response = await fetch('/api/highscore');
+        const data = await response.json();
+        return data.highScore;
+    } catch (error) {
+        console.error('Error al obtener el high score:', error);
+        return 0;
+    }
 }
 
-function saveHighScore(score) {
-    localStorage.setItem('highScore', score);
+async function saveHighScore(score) {
+    try {
+        await fetch('/api/highscore', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ score }),
+        });
+    } catch (error) {
+        console.error('Error al guardar el high score:', error);
+    }
 }
 
 function padScore(score) {
@@ -70,21 +105,18 @@ function updateScoreboard() {
 function resetGame() {
     snakeList = [];
     lengthOfSnake = 1;
-    x1 = width / 2;
-    y1 = height / 2;
     x1Change = 0;
     y1Change = 0;
-    foodx = getRandomFoodPosition(width, margin, snakeBlock);
-    foody = getRandomFoodPosition(height, margin, snakeBlock);
     direction = "";
     gameClose = false;
+    resizeCanvas();
     updateScoreboard();
 }
 
 function handleKeyDown(event) {
     if (event.key === 'Enter') {
         if (startScreen.style.display !== 'none') {
-            hideStartScreen(); // Esto detendrá el sonido de la pantalla de inicio
+            hideStartScreen();
             showGameScreen();
             startGame();
         } else if (gameOverScreen.style.display !== 'none') {
@@ -118,22 +150,23 @@ function handleKeyDown(event) {
     }
 }
 
-function startGame() {
+async function startGame() {
     resetGame();
+    highScore = await getHighScore();
+    updateScoreboard();
     gameLoop = setInterval(updateGameArea, 100);
-    // Removemos playMoveSound() de aquí
 }
 
-function updateGameArea() {
+async function updateGameArea() {
     if (gameClose) {
         clearInterval(gameLoop);
-        stopMoveSound(); // Detiene el sonido de movimiento
+        stopMoveSound();
         showGameOverScreen();
         return;
     }
 
-    if (x1 + x1Change >= width || x1 + x1Change < 0 || 
-        y1 + y1Change >= height || y1 + y1Change < 0) {
+    if (x1 + x1Change >= canvas.width || x1 + x1Change < 0 || 
+        y1 + y1Change >= canvas.height || y1 + y1Change < 0) {
         gameClose = true;
         return;
     }
@@ -142,10 +175,10 @@ function updateGameArea() {
     y1 += y1Change;
 
     ctx.fillStyle = colors.black;
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     ctx.strokeStyle = colors.green;
-    ctx.strokeRect(0, 0, width, height);
+    ctx.strokeRect(0, 0, canvas.width, canvas.height);
     
     ctx.fillStyle = colors.red;
     ctx.fillRect(foodx, foody, snakeBlock, snakeBlock);
@@ -163,13 +196,13 @@ function updateGameArea() {
     drawSnake();
     
     if (x1 === foodx && y1 === foody) {
-        foodx = getRandomFoodPosition(width, margin, snakeBlock);
-        foody = getRandomFoodPosition(height, margin, snakeBlock);
+        foodx = getRandomFoodPosition(canvas.width, margin, snakeBlock);
+        foody = getRandomFoodPosition(canvas.height, margin, snakeBlock);
         lengthOfSnake++;
         playEatSound();
         if (lengthOfSnake - 1 > highScore) {
             highScore = lengthOfSnake - 1;
-            saveHighScore(highScore);
+            await saveHighScore(highScore);
         }
         updateScoreboard();
     }
@@ -207,34 +240,22 @@ function hideGameOverScreen() {
     gameOverScreen.style.display = 'none';
 }
 
-document.addEventListener('keydown', handleKeyDown);
-
-window.onload = showStartScreen;
-
-// Add these functions at the end of the file
 function playEatSound() {
-    const eatSound = new Audio('eat.mp3');
-    eatSound.volume = 0.3;
+    eatSound.currentTime = 0;
     eatSound.play();
 }
 
 function playGameOverSound() {
-    const gameOverSound = new Audio('gameover.mp3');
-    gameOverSound.volume = 0.3;
+    gameOverSound.currentTime = 0;
     gameOverSound.play();
 }
 
 function playMoveSound() {
-    if (!moveSound) {
-        moveSound = new Audio('move.mp3');
-        moveSound.volume = 0.2; // Ajusta el volumen según sea necesario
-    }
-    
     if (!moveSoundInterval && isMoving) {
         moveSoundInterval = setInterval(() => {
             moveSound.currentTime = 0;
             moveSound.play();
-        }, 250); // Ajusta este valor para cambiar la frecuencia del sonido
+        }, 250);
     }
 }
 
@@ -246,22 +267,24 @@ function stopMoveSound() {
 }
 
 function playStartScreenSound() {
-    if (!startScreenSound) {
-        startScreenSound = new Audio('start_screen.mp3');
-        startScreenSound.loop = true;
-        startScreenSound.volume = 0.5;
-    }
     startScreenSound.play().catch(error => {
         console.error("Error al reproducir el sonido:", error);
     });
 }
 
 function stopStartScreenSound() {
-    if (startScreenSound) {
-        startScreenSound.pause();
-        startScreenSound.currentTime = 0;
-    }
+    startScreenSound.pause();
+    startScreenSound.currentTime = 0;
 }
+
+document.addEventListener('keydown', handleKeyDown);
+
+window.onload = () => {
+    showStartScreen();
+    resizeCanvas();
+};
+
+window.addEventListener('resize', resizeCanvas);
 
 document.addEventListener('click', function() {
     if (startScreen.style.display !== 'none') {

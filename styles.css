@@ -71,6 +71,11 @@ body, html {
     box-shadow: 0 0 20px #0f0, inset 0 0 10px #0f0;
     position: relative;
     border-radius: 10px;
+    width: 90vw;
+    height: 90vh;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 }
 
 #title {
@@ -82,16 +87,26 @@ body, html {
     padding: 0 10px;
     font-size: 24px;
     text-shadow: 0 0 10px #0f0;
+    white-space: nowrap;
 }
 
 #innerBorder {
     border: 2px solid #0f0;
     margin-bottom: 20px;
     box-shadow: inset 0 0 5px #0f0;
+    flex-grow: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
 }
 
 #gameCanvas {
     display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
 }
 
 #scoreBoard {
@@ -136,4 +151,22 @@ body::after {
     pointer-events: none;
     animation: flicker 0.15s infinite;
     z-index: 999;
+}
+
+@media (max-width: 768px) {
+    .snake-text {
+        font-size: 2em;
+    }
+
+    .press-start {
+        font-size: 0.8em;
+    }
+
+    #title {
+        font-size: 18px;
+    }
+
+    #scoreBoard {
+        font-size: 12px;
+    }
 }
